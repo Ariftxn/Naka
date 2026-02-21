@@ -1,8 +1,11 @@
 // index.js
 require("dotenv").config();
 const fs = require("fs");
+const path = require("path");
+const express = require("express");
 const { Client, Collection, GatewayIntentBits } = require("discord.js");
 
+// ======== Discord Client Setup ========
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -14,19 +17,19 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// ===== LOAD COMMANDS =====
-const commandFiles = fs.readdirSync("./commands").filter(file => file.endsWith(".js"));
+// ======== Load all commands from root commands folder ========
+const commandFiles = fs.readdirSync(path.join(__dirname, "commands")).filter(file => file.endsWith(".js"));
 for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
+  const command = require(path.join(__dirname, "commands", file));
   if (command.name) client.commands.set(command.name, command);
 }
 
-// ===== LOAD PREFIXES =====
-const prefixPath = "./data/prefixes.json";
+// ======== Load prefixes ========
+const prefixPath = path.join(__dirname, "data", "prefixes.json");
 if (!fs.existsSync(prefixPath)) fs.writeFileSync(prefixPath, JSON.stringify({}));
 let prefixes = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
 
-// ===== PREFIX COMMAND HANDLER =====
+// ======== PREFIX COMMAND HANDLER ========
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
   if (!message.guild) return;
@@ -50,7 +53,7 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-// ===== SLASH COMMAND HANDLER =====
+// ======== SLASH COMMAND HANDLER ========
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -65,13 +68,52 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// ===== BOT READY =====
+// ======== DASHBOARD SETUP ========
+const app = express();
+app.set("view engine", "ejs");
+app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
+
+// Home route
+app.get("/", (req, res) => {
+  res.render("home/index", { user: client.user ? client.user.tag : "Loading..." });
+});
+
+// Commands route
+app.get("/commands", (req, res) => {
+  const commands = Array.from(client.commands.values());
+  res.render("commands/index", { commands });
+});
+
+// Vouchers route
+app.get("/vouchers", (req, res) => {
+  const voucherPath = path.join(__dirname, "data", "vouchers.json");
+  if (!fs.existsSync(voucherPath)) fs.writeFileSync(voucherPath, JSON.stringify([]));
+  const vouchers = JSON.parse(fs.readFileSync(voucherPath, "utf-8"));
+  res.render("vouchers/list", { vouchers });
+});
+
+// Roles route
+app.get("/roles", (req, res) => {
+  res.render("roles/index", { guilds: client.guilds.cache });
+});
+
+// Mini-games route
+app.get("/minigames", (req, res) => {
+  res.render("mini-games/index");
+});
+
+// Dashboard server listen
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Dashboard running at http://localhost:${PORT}`));
+
+// ======== BOT READY ========
 client.once("ready", () => {
   console.log(`${client.user.tag} is online!`);
   client.user.setActivity(".help | Naka Bot", { type: "WATCHING" });
 });
 
-// ===== SAVE PREFIXES ON JOIN =====
+// ======== SAVE PREFIXES ON GUILD JOIN ========
 client.on("guildCreate", (guild) => {
   if (!prefixes[guild.id]) {
     prefixes[guild.id] = process.env.PREFIX || ".";
@@ -79,5 +121,5 @@ client.on("guildCreate", (guild) => {
   }
 });
 
-// ===== LOGIN =====
+// ======== LOGIN ========
 client.login(process.env.BOT_TOKEN);
