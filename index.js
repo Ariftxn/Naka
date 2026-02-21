@@ -14,17 +14,17 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// Load semua command
+// ===== LOAD COMMANDS =====
 const commandFiles = fs.readdirSync("./commands").filter(file => file.endsWith(".js"));
 for (const file of commandFiles) {
   const command = require(`./commands/${file}`);
-  client.commands.set(command.name, command);
+  if (command.name) client.commands.set(command.name, command);
 }
 
-// Load prefixes
+// ===== LOAD PREFIXES =====
 const prefixPath = "./data/prefixes.json";
 if (!fs.existsSync(prefixPath)) fs.writeFileSync(prefixPath, JSON.stringify({}));
-let prefixes = JSON.parse(fs.readFileSync(prefixPath));
+let prefixes = JSON.parse(fs.readFileSync(prefixPath, "utf-8"));
 
 // ===== PREFIX COMMAND HANDLER =====
 client.on("messageCreate", async (message) => {
@@ -71,12 +71,13 @@ client.once("ready", () => {
   client.user.setActivity(".help | Naka Bot", { type: "WATCHING" });
 });
 
-// ===== SAVE PREFIXES =====
-client.on("guildCreate", guild => {
+// ===== SAVE PREFIXES ON JOIN =====
+client.on("guildCreate", (guild) => {
   if (!prefixes[guild.id]) {
     prefixes[guild.id] = process.env.PREFIX || ".";
     fs.writeFileSync(prefixPath, JSON.stringify(prefixes, null, 2));
   }
 });
 
+// ===== LOGIN =====
 client.login(process.env.BOT_TOKEN);
