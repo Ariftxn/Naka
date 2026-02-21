@@ -1,66 +1,49 @@
 # Naka Bot 🤖
 
-**Naka** is an all-in-one Discord bot designed to make server management easy, interactive, and fun.  
-It comes with moderation tools, voucher & reward systems, reaction roles, tickets, mini-games, leveling, and a modern responsive web dashboard.
+**Naka Bot** is a full-featured Discord bot built with **discord.js v14**, designed for **moderation, fun mini-games, and role-based voucher systems**.  
+It supports **prefix commands**, **slash commands**, and **custom prefixes per server**.
 
 ---
 
-## **🌟 Features**
+## 🌟 Features
 
-### **Moderation**
-- Warn, kick, ban members
-- Permission-based commands (admin only)
-- Embed-based logs for clarity
+### 1️⃣ Command System
+- Supports **prefix commands** (default: `.`)  
+- Supports **slash commands**  
+- Customizable prefix per server (`.setprefix <prefix>`)
 
-### **Utility**
-- User info `.userinfo`
-- Server info `.serverinfo`
-- Prefix commands, fully customizable
+### 2️⃣ Moderation Commands
+- `.ban <user> [reason]` → Ban a user  
+- `.kick <user> [reason]` → Kick a user  
+- `.warn <user> [reason]` → Issue a warning  
+- `.userinfo <user>` → Show detailed user info  
+- `.serverinfo` → Show server details
 
-### **Voucher System**
-- Admin can create vouchers with max redeem limits
-- Members can redeem vouchers to get roles
-- Voucher list display in embed format
-- Auto-sync between slash commands and dashboard
+### 3️⃣ Voucher System
+- Admin commands:
+  - `/voucher create [code] [role] [maxredeem]` → Create voucher  
+  - `/voucher list` → List all vouchers  
+- User commands:
+  - `.redeem <code>` → Redeem voucher and get role directly  
+  - `/redeem <code>` → Slash version  
+- Max redeem limit enforced  
+- Redemption notifications via **embed messages**
 
-### **Reaction Roles**
-- Assign roles using reaction emojis or dropdowns
-- Auto-fetch roles and emojis from server
-- Fully interactive and easy to configure
+### 4️⃣ Mini-Games 🎮
+- `.coinflip <heads/tails>` → Flip a coin  
+- `.dice` → Roll a dice  
+- `.russianroulette` → Mini-game with 6-chamber random chance, embeds, and reactions
 
-### **Tickets**
-- Create/close tickets
-- Track ticket activity in dashboard
-
-### **Mini-Games**
-- Coin flip `.coinflip heads/tails`
-- Dice roll `.dice <sides>`
-- Blackjack (coming soon)
-- All game results shown in embeds
-
-### **Welcome & Goodbye**
-- Custom embed messages for joins and leaves
-- Optional images
-- Track member count (e.g., member #123)
-- Fully configurable in dashboard
-
-### **Leveling System**
-- Track user XP and levels
-- Leaderboard display
-- Optional auto-role on level-up
-
-### **Dashboard**
-- Fully responsive web dashboard (mobile, tablet, desktop)
-- Login with Discord OAuth2
-- Configure commands, roles, vouchers, tickets
-- Embed preview and customization
-- Auto-sync with bot
+### 5️⃣ Help Command
+- `.help` → Shows all commands categorized  
+- Commands organized by category in **help embed**
 
 ---
 
-## **⚡ Installation**
+## ⚙️ Setup
 
 1. Clone the repository:
+
 ```bash
-git clone https://github.com/yourusername/naka-bot.git
-cd naka-bot
+git clone https://github.com/Ariftxn/naka.git
+cd naka
