@@ -1,43 +1,83 @@
-import fs from "fs-extra";
-import { v4 as uuidv4 } from "uuid";
+// commands/voucher.js
+const fs = require("fs");
+const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+const path = "./data/vouchers.json";
 
-export default {
+// Load vouchers.json, buat kalau belum ada
+if (!fs.existsSync(path)) fs.writeFileSync(path, JSON.stringify([]));
+
+module.exports = {
   name: "voucher",
-  description: "Voucher system (create/redeem/list)",
-  async execute({ message, args }) {
-    const sub = args[0];
-    if(!message.member.permissions.has("Administrator")) return message.reply("No perms.");
+  description: "Create or redeem a voucher",
+  category: "🎟 Vouchers",
+  async execute(interaction) {
+    const subcommand = interaction.options.getSubcommand();
 
-    const file = "./data/vouchers.json";
-    const vouchers = await fs.readJson(file).catch(()=>[]);
+    let vouchers = JSON.parse(fs.readFileSync(path));
 
-    if(sub === "create"){
-      const roleName = args[1];
-      const maxRedeem = parseInt(args[2]) || 1;
-      const code = uuidv4().slice(0,12).toUpperCase();
-      vouchers.push({ code, role: roleName, maxRedeem, redeemed: [] });
-      await fs.writeJson(file, vouchers, { spaces: 2 });
-      message.channel.send({ embeds: [{ title: "Voucher Created", description: `Code: ${code}\nRole: ${roleName}\nMax Redeem: ${maxRedeem}`, color: 0x2ECC71 }] });
-    } else if(sub === "list"){
-      if(vouchers.length===0) return message.reply("No vouchers.");
-      const embed = { title:"Vouchers List", color:0x3498DB, fields:[] };
-      vouchers.forEach(v=>embed.fields.push({ name:v.code, value:`Role: ${v.role} | Redeemed: ${v.redeemed.length}/${v.maxRedeem}`, inline:false }));
-      message.channel.send({ embeds:[embed] });
-    } else if(sub==="redeem"){
-      const code = args[1];
-      const member = message.member;
-      const voucher = vouchers.find(v=>v.code===code);
-      if(!voucher) return message.reply("Invalid code.");
-      if(voucher.redeemed.includes(member.id)) return message.reply("You already redeemed this.");
-      if(voucher.redeemed.length >= voucher.maxRedeem) return message.reply("Max redeems reached.");
-      const role = message.guild.roles.cache.find(r=>r.name===voucher.role);
-      if(!role) return message.reply("Role not found.");
-      await member.roles.add(role);
-      voucher.redeemed.push(member.id);
-      await fs.writeJson(file, vouchers, { spaces: 2 });
-      message.channel.send({ embeds:[{ title:"Voucher Redeemed", description:`Role ${role.name} added!`, color:0x2ECC71 }] });
-    } else {
-      message.reply("Usage: create/list/redeem");
+    // ===== CREATE VOUCHER (ADMIN ONLY) =====
+    if (subcommand === "create") {
+      if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+        return interaction.reply({ content: "❌ Only admins can create vouchers.", ephemeral: true });
+      }
+
+      const code = interaction.options.getString("code") || Math.random().toString(36).slice(2, 14).toUpperCase();
+      const role = interaction.options.getRole("role");
+      const maxRedeem = interaction.options.getInteger("maxredeem") || 1;
+
+      vouchers.push({ code, roleId: role.id, maxRedeem, redeemedBy: [] });
+      fs.writeFileSync(path, JSON.stringify(vouchers, null, 2));
+
+      const embed = new EmbedBuilder()
+        .setTitle("✅ Voucher Created")
+        .setColor("Green")
+        .addFields(
+          { name: "Code", value: code },
+          { name: "Role", value: `<@&${role.id}>` },
+          { name: "Max Redeem", value: maxRedeem.toString() }
+        );
+      return interaction.reply({ embeds: [embed] });
     }
-  }
+
+    // ===== REDEEM VOUCHER =====
+    if (subcommand === "redeem") {
+      const code = interaction.options.getString("code").toUpperCase();
+      const voucher = vouchers.find(v => v.code === code);
+
+      if (!voucher) return interaction.reply({ content: "❌ Voucher not found.", ephemeral: true });
+      if (voucher.redeemedBy.includes(interaction.user.id)) return interaction.reply({ content: "❌ You have already redeemed this voucher.", ephemeral: true });
+      if (voucher.redeemedBy.length >= voucher.maxRedeem) return interaction.reply({ content: "❌ This voucher has reached max redeem limit.", ephemeral: true });
+
+      const member = interaction.guild.members.cache.get(interaction.user.id);
+      if (!member) return interaction.reply({ content: "❌ User not found in server.", ephemeral: true });
+
+      try {
+        await member.roles.add(voucher.roleId);
+        voucher.redeemedBy.push(interaction.user.id);
+        fs.writeFileSync(path, JSON.stringify(vouchers, null, 2));
+
+        const embed = new EmbedBuilder()
+          .setTitle("🎉 Voucher Redeemed!")
+          .setColor("Blue")
+          .setDescription(`You received the role <@&${voucher.roleId}>`)
+          .addFields({ name: "Voucher Code", value: voucher.code });
+        return interaction.reply({ embeds: [embed] });
+      } catch (err) {
+        console.error(err);
+        return interaction.reply({ content: "❌ Failed to give the role. Make sure bot has permission.", ephemeral: true });
+      }
+    }
+
+    // ===== LIST VOUCHERS =====
+    if (subcommand === "list") {
+      const embed = new EmbedBuilder()
+        .setTitle("📜 Voucher List")
+        .setColor("Yellow")
+        .setDescription(vouchers.length ? vouchers.map(v => {
+          return `**${v.code}** → Role: <@&${v.roleId}> | Redeemed: ${v.redeemedBy.length}/${v.maxRedeem}`;
+        }).join("\n") : "No vouchers yet.");
+
+      return interaction.reply({ embeds: [embed] });
+    }
+  },
 };
