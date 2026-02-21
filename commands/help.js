@@ -1,16 +1,16 @@
-import { EmbedBuilder } from "discord.js";
-import fs from "fs";
-import path from "path";
+// commands/help.js
+const { MessageEmbed } = require("discord.js");
+const fs = require("fs");
+const path = require("path");
 
-export default {
+module.exports = {
   name: "help",
   description: "Show all commands grouped by category",
-  async execute(interaction) {
-    // Path ke folder commands
+  category: "🛠 Utility",
+  executePrefix: async (message, args) => {
     const commandsPath = path.join(__dirname);
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
 
-    // Siapkan kategori
     const categories = {
       "🎮 Mini-Games": [],
       "🛠 Utility": [],
@@ -22,11 +22,9 @@ export default {
       "🔧 Other": [],
     };
 
-    // Loop tiap file command
     for (const file of commandFiles) {
-      if(file === "help.js") continue; // skip help sendiri
-      const command = require(`./${file}`).default || require(`./${file}`);
-      // Cek kategori command, default ke Other
+      if (file === "help.js") continue;
+      const command = require(path.join(__dirname, file));
       const category = command.category || "🔧 Other";
       if (!categories[category]) categories[category] = [];
       categories[category].push({
@@ -35,22 +33,20 @@ export default {
       });
     }
 
-    // Buat embed
-    const embed = new EmbedBuilder()
+    const embed = new MessageEmbed()
       .setTitle("📜 Naka Bot Commands")
-      .setColor("Blue")
+      .setColor("BLUE")
       .setDescription("Here is the list of all available commands. Prefix: `.`")
       .setFooter({ text: "Naka Bot – All commands embed-based" });
 
-    // Tambahkan field per kategori
     for (const [catName, cmds] of Object.entries(categories)) {
-      if (cmds.length === 0) continue; // skip kategori kosong
+      if (cmds.length === 0) continue;
       embed.addFields({
         name: catName,
         value: cmds.map(c => `**${c.name}** → ${c.value}`).join("\n"),
       });
     }
 
-    await interaction.reply({ embeds: [embed] });
+    message.channel.send({ embeds: [embed] });
   },
 };
