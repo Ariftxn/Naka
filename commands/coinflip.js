@@ -1,10 +1,22 @@
-export default {
+// commands/coinflip.js
+const { EmbedBuilder } = require("discord.js");
+
+module.exports = {
   name: "coinflip",
-  description: "Flip a coin",
-  async execute({ message, args }) {
-    const choice = args[0]?.toLowerCase();
-    if(!choice || !["heads","tails"].includes(choice)) return message.reply("Use: .coinflip heads/tails");
-    const result = Math.random()<0.5?"heads":"tails";
-    message.channel.send({ embeds:[{ title:"Coin Flip", description:`You chose: ${choice}\nResult: ${result}`, color:0xF1C40F }] });
-  }
+  description: "Flip a coin (heads or tails)",
+  category: "🎮 Mini-Games",
+  async execute(interaction) {
+    // Pilihan head atau tail secara random
+    const choices = ["Heads 🪙", "Tails 🪙"];
+    const result = choices[Math.floor(Math.random() * choices.length)];
+
+    const embed = new EmbedBuilder()
+      .setTitle("🎲 Coin Flip")
+      .setDescription(`The coin landed on: **${result}**`)
+      .setColor("Yellow")
+      .setFooter({ text: "Naka Bot – Mini-Game" })
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+  },
 };
