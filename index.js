@@ -1,52 +1,81 @@
-import { Client, GatewayIntentBits, Partials } from "discord.js";
-import dotenv from "dotenv";
-import fs from "fs";
-import path from "path";
-
-dotenv.config();
+// index.js
+require("dotenv").config();
+const fs = require("fs");
+const { Client, Collection, GatewayIntentBits } = require("discord.js");
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
   ],
-  partials: [Partials.Channel]
 });
 
-client.commands = new Map();
+client.commands = new Collection();
 
-// Load commands
-const commandsPath = path.join('./commands');
-fs.readdirSync(commandsPath).forEach(file => {
-  if(file.endsWith('.js')){
-    const command = await import(`./commands/${file}`);
-    client.commands.set(command.default.name, command.default);
+// Load semua command
+const commandFiles = fs.readdirSync("./commands").filter(file => file.endsWith(".js"));
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  client.commands.set(command.name, command);
+}
+
+// Load prefixes
+const prefixPath = "./data/prefixes.json";
+if (!fs.existsSync(prefixPath)) fs.writeFileSync(prefixPath, JSON.stringify({}));
+let prefixes = JSON.parse(fs.readFileSync(prefixPath));
+
+// ===== PREFIX COMMAND HANDLER =====
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+  if (!message.guild) return;
+
+  const guildId = message.guild.id;
+  const prefix = prefixes[guildId] || process.env.PREFIX || ".";
+
+  if (!message.content.startsWith(prefix)) return;
+
+  const args = message.content.slice(prefix.length).trim().split(/ +/);
+  const cmdName = args.shift().toLowerCase();
+  const command = client.commands.get(cmdName);
+
+  if (!command || !command.executePrefix) return;
+
+  try {
+    await command.executePrefix(message, args);
+  } catch (err) {
+    console.error(err);
+    message.reply("❌ Something went wrong executing that command.");
   }
 });
 
-// Ready
-client.once("ready", () => {
-  console.log(`🚀 Naka Bot is online as ${client.user.tag}`);
-});
+// ===== SLASH COMMAND HANDLER =====
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
 
-// Prefix commands
-client.on("messageCreate", async message => {
-  if(message.author.bot) return;
-  if(!message.content.startsWith(process.env.PREFIX)) return;
-
-  const args = message.content.slice(process.env.PREFIX.length).trim().split(/ +/);
-  const commandName = args.shift().toLowerCase();
-
-  if(!client.commands.has(commandName)) return;
+  const command = client.commands.get(interaction.commandName);
+  if (!command) return;
 
   try {
-    const command = client.commands.get(commandName);
-    await command.execute({ client, message, args });
-  } catch(err){
+    await command.execute(interaction);
+  } catch (err) {
     console.error(err);
-    message.reply("Error executing this command.");
+    interaction.reply({ content: "❌ Something went wrong executing that command.", ephemeral: true });
+  }
+});
+
+// ===== BOT READY =====
+client.once("ready", () => {
+  console.log(`${client.user.tag} is online!`);
+  client.user.setActivity(".help | Naka Bot", { type: "WATCHING" });
+});
+
+// ===== SAVE PREFIXES =====
+client.on("guildCreate", guild => {
+  if (!prefixes[guild.id]) {
+    prefixes[guild.id] = process.env.PREFIX || ".";
+    fs.writeFileSync(prefixPath, JSON.stringify(prefixes, null, 2));
   }
 });
 
