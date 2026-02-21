@@ -1,14 +1,37 @@
-export default {
+// commands/kick.js
+const { EmbedBuilder, PermissionsBitField } = require("discord.js");
+
+module.exports = {
   name: "kick",
-  description: "Kick a member",
-  async execute({ message, args }) {
-    if(!message.member.permissions.has("KickMembers")) return message.reply("No perms.");
-    const member = message.mentions.members.first();
-    if(!member) return message.reply("Mention a member.");
-    const reason = args.slice(1).join(" ") || "No reason.";
+  description: "Kick a member from the server",
+  category: "⚔ Moderation",
+  async execute(interaction) {
+    const target = interaction.options.getUser("user");
+    const reason = interaction.options.getString("reason") || "No reason provided";
+
+    // Cek permission member
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+      return interaction.reply({ content: "❌ You don't have permission to kick members.", ephemeral: true });
+    }
+
+    const member = interaction.guild.members.cache.get(target.id);
+    if (!member) return interaction.reply({ content: "❌ User not found in this server.", ephemeral: true });
+
     try {
       await member.kick(reason);
-      message.channel.send({ embeds: [{ title: `Kicked ${member.user.tag}`, description: `Reason: ${reason}`, color: 0xE74C3C }] });
-    } catch(err) { message.reply("Error kicking member."); }
-  }
+      const embed = new EmbedBuilder()
+        .setTitle("👢 Member Kicked")
+        .setColor("Orange")
+        .addFields(
+          { name: "Kicked Member", value: `<@${member.id}>`, inline: true },
+          { name: "Kicked By", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "Reason", value: reason, inline: false }
+        )
+        .setTimestamp();
+      await interaction.reply({ embeds: [embed] });
+    } catch (err) {
+      console.error(err);
+      interaction.reply({ content: "❌ Unable to kick the member. Make sure my role is higher than the target.", ephemeral: true });
+    }
+  },
 };
