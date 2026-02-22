@@ -1,5 +1,4 @@
-// commands/help.js
-const { MessageEmbed } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 
@@ -7,6 +6,7 @@ module.exports = {
   name: "help",
   description: "Show all commands grouped by category",
   category: "🛠 Utility",
+
   executePrefix: async (message, args) => {
     const commandsPath = path.join(__dirname);
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
@@ -33,9 +33,9 @@ module.exports = {
       });
     }
 
-    const embed = new MessageEmbed()
+    const embed = new EmbedBuilder()
       .setTitle("📜 Naka Bot Commands")
-      .setColor("BLUE")
+      .setColor("Blue")
       .setDescription("Here is the list of all available commands. Prefix: `.`")
       .setFooter({ text: "Naka Bot – All commands embed-based" });
 
